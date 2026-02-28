@@ -2,8 +2,11 @@ import { spawn, execSync, ChildProcess } from "child_process";
 import * as path from "path";
 import * as fs from "fs";
 import * as net from "net";
+import * as tar from "tar";
+import * as zlib from "zlib";
 import { chromium } from "playwright";
 import { showAnnotation, hideAnnotation, showFinalOverlay, demoClick, demoType, hideCursor } from "./annotations";
+import { match } from "assert";
 
 // Load .env file from repo root
 const envPath = path.resolve(__dirname, "..", ".env");
@@ -27,18 +30,56 @@ const JWT_SECRET = "demo-secret";
 const OUTPUT_DIR = path.join(__dirname, "..", "output");
 
 // ── Binary resolution ────────────────────────────────────────────────────
-
-function getPlatformInfo(): { os: string; arch: string } {
+async function getNebiFilename(): Promise<string> {
+  const version = await getLatestRelease()
   const platform = process.platform;
   const arch = process.arch;
-  const os = platform === "darwin" ? "darwin" : platform === "win32" ? "windows" : "linux";
-  const goArch = arch === "arm64" ? "arm64" : "amd64";
-  return { os, arch: goArch };
+
+  let os;
+  let ext;
+  if (platform === "darwin") {
+    os = "macOS"
+    ext = ".tar.gz"
+  } else if (platform === "win32") {
+    os = "windows"
+    ext = ".zip"
+  } else {
+    os = "linux"
+    ext = ".tar.gz"
+  }
+
+  return `nebi-${version}-${os}-${arch}${ext}`
+}
+
+/**
+ * @param filename - Filename to extract
+ * @param destDir - Directory where the nebi binary should live. Must already exist on filesystem.
+ */
+async function extract(filename: string, destDir: string) {
+  const finalPath = path.join(destDir, "nebi")
+
+  if (filename.endsWith(".tar.gz")) {
+    // Extract to the same directory where the archive is, then move to the final destination
+    const extractDir = path.dirname(filename)
+    await tar.x({f: filename, C: extractDir})
+    fs.renameSync(path.join(extractDir, "nebi"), finalPath)
+  } else if (filename.endsWith(".zip")) {
+    const buf = zlib.unzipSync(fs.readFileSync(filename))
+    fs.writeFileSync(finalPath, buf)
+  } else {
+    throw new Error("Unrecognized artifact filetype; aborting.")
+  }
+
+}
+
+async function getLatestRelease(): Promise<string> {
+  const result = await fetch("https://api.github.com/repos/nebari-dev/nebi/releases/latest")
+  const latestRelease = await result.json()
+  return latestRelease['name']
 }
 
 async function downloadBinary(dest: string): Promise<void> {
-  const { os, arch } = getPlatformInfo();
-  const filename = `nebi-${os}-${arch}`;
+  const filename = await getNebiFilename()
   const url = `https://github.com/nebari-dev/nebi/releases/latest/download/${filename}`;
   console.log(`Downloading nebi binary from ${url}...`);
 
@@ -46,8 +87,11 @@ async function downloadBinary(dest: string): Promise<void> {
   if (!res.ok) throw new Error(`Failed to download binary: ${res.status} ${res.statusText}`);
 
   const buffer = Buffer.from(await res.arrayBuffer());
-  fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, buffer);
+  const parent = path.dirname(dest)
+  const downloadedFilename = path.join(parent, filename)
+  fs.mkdirSync(parent, { recursive: true });
+  fs.writeFileSync(downloadedFilename, buffer);
+  await extract(downloadedFilename, dest)
   fs.chmodSync(dest, 0o755);
   console.log(`Binary downloaded to ${dest}`);
 }
