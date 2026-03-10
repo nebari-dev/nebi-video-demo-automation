@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as net from "net";
 import { chromium } from "playwright";
 import { showAnnotation, hideAnnotation, showFinalOverlay, demoClick, demoType, hideCursor } from "./annotations";
+import * as tar from "tar";
 
 // Load .env file from repo root
 const envPath = path.resolve(__dirname, "..", ".env");
@@ -32,22 +33,53 @@ function getPlatformInfo(): { os: string; arch: string } {
   const platform = process.platform;
   const arch = process.arch;
   const os = platform === "darwin" ? "darwin" : platform === "win32" ? "windows" : "linux";
-  const goArch = arch === "arm64" ? "arm64" : "amd64";
+  const goArch = arch === "arm64" ? "arm64" : "x86_64";
   return { os, arch: goArch };
 }
 
+/**
+ * Downloads the latest nebi binary from GitHub releases.
+ *
+ * Fetches the latest release from the nebi GitHub repository, identifies the
+ * appropriate binary for the current platform and architecture, downloads it,
+ * and saves it to the specified destination with executable permissions.
+ *
+ * @param dest - The absolute path where the binary should be saved
+ * @throws {Error} If the GitHub API request fails
+ * @throws {Error} If no matching binary asset is found for the current platform
+ * @throws {Error} If the binary download fails
+ */
 async function downloadBinary(dest: string): Promise<void> {
   const { os, arch } = getPlatformInfo();
-  const filename = `nebi-${os}-${arch}`;
-  const url = `https://github.com/nebari-dev/nebi/releases/latest/download/${filename}`;
-  console.log(`Downloading nebi binary from ${url}...`);
 
-  const res = await fetch(url, { redirect: "follow" });
+  const apiUrl = "https://api.github.com/repos/nebari-dev/nebi/releases/latest";
+  const releaseRes = await fetch(apiUrl, {
+    headers: { Accept: "application/vnd.github+json" },
+  });
+  if (!releaseRes.ok) throw new Error(`Failed to fetch release info: ${releaseRes.status} ${releaseRes.statusText}`);
+
+  const release = await releaseRes.json() as { assets: Array<{ name: string; browser_download_url: string }> };
+  const asset = release.assets.find((a) => !a.name.includes('desktop') && a.name.includes(os) && a.name.includes(arch));
+  if (!asset) throw new Error(`No nebi release found for ${os}/${arch}. Available: ${release.assets.map((a) => a.name).join(", ")}`);
+
+  console.log(`Downloading nebi asset from ${asset.browser_download_url}...`);
+  const res = await fetch(asset.browser_download_url, { redirect: "follow" });
   if (!res.ok) throw new Error(`Failed to download binary: ${res.status} ${res.statusText}`);
 
   const buffer = Buffer.from(await res.arrayBuffer());
+  const fname = asset.browser_download_url.substring(asset.browser_download_url.lastIndexOf('/')+1)
+  const binDir = path.dirname(dest)
+  const tarFile = path.join(binDir, fname)
+
   fs.mkdirSync(path.dirname(dest), { recursive: true });
-  fs.writeFileSync(dest, buffer);
+  fs.writeFileSync(tarFile, buffer);
+
+  console.log(`Extracting ${tarFile}...`)
+  await tar.x({f: tarFile, cwd: binDir})
+  if (!fs.existsSync(path.join(path.dirname(dest), 'nebi'))) {
+    throw new Error(`${fname} has no binary name 'nebi'. Aborting.`)
+  }
+
   fs.chmodSync(dest, 0o755);
   console.log(`Binary downloaded to ${dest}`);
 }
