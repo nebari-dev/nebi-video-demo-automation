@@ -508,12 +508,9 @@ async function recordDemo(base: string) {
   logScene(2, Date.now() - recordingStart);
   await page.getByRole("heading", { name: "Workspaces" }).waitFor();
   markAudioStart("02.wav");
-  await showAnnotation(page, "Manage workspaces for your team");
+  await showAnnotation(page, "Manage workspaces (environments) for your team");
   await waitForClipEnd();
   await hideAnnotation(page);
-
-  // Scenes follow the UI tab order:
-  // Overview → Packages → pixi.toml → Version History → Publications → Collaborators
 
   // Scene 3: Workspace detail (Overview)
   logScene(3, Date.now() - recordingStart);
@@ -524,48 +521,40 @@ async function recordDemo(base: string) {
   await waitForClipEnd();
   await hideAnnotation(page);
 
-  // Scene 4: Packages — install scipy
+  // Scene 4 : Configuration (pixi.toml)
   logScene(4, Date.now() - recordingStart);
-  await demoClick(page, page.getByText("Packages", { exact: true }));
-  await sleep(300);
+  await demoClick(page, page.getByText("Configuration", { exact: true }));
+  await sleep(500);
   markAudioStart("04.wav");
-  const installBtn = page.getByText("Install Package");
-  if (await installBtn.isVisible()) {
-    await demoClick(page, installBtn);
-    await sleep(200);
-  }
+  await demoClick(page, page.getByText("Edit", { exact: true }).first());
+  await showAnnotation(page, "Edit configuration (pixi.toml) directly");
+  await waitForClipEnd();
+  await hideAnnotation(page);
+
+  // Scene 5: Add package in UI
+  logScene(5, Date.now() - recordingStart);
+  await showAnnotation(page, "Install packages with a few clicks");
+  markAudioStart("05.wav");
+  await demoClick(page, page.getByText("UI Mode", { exact: true }));
+  await sleep(500);
   const pkgInput = page.getByPlaceholder("Package name");
   if (await pkgInput.isVisible()) {
     await demoClick(page, pkgInput);
     await demoType(page, pkgInput, "scipy");
-    await sleep(200);
-    const installConfirmBtn = page.getByRole("button", { name: "Install", exact: true });
+    await sleep(500);
+    const installConfirmBtn = page.getByRole("button", { name: "Save & Install", exact: true });
     await demoClick(page, installConfirmBtn);
     await showAnnotation(page, "Installing scipy...");
     await page.getByText("scipy").first().waitFor({ timeout: 120000 });
     await hideAnnotation(page);
   }
-  await showAnnotation(page, "Install packages with one click");
-  await waitForClipEnd();
-  await hideAnnotation(page);
-
-  // Scene 5: pixi.toml tab
-  logScene(5, Date.now() - recordingStart);
-  markAudioStart("05.wav");
-  await demoClick(page, page.getByText("pixi.toml", { exact: true }));
-  await sleep(300);
-  const editBtn = page.getByRole("button", { name: "Edit" }).first();
-  if (await editBtn.isVisible()) {
-    await demoClick(page, editBtn);
-  }
-  await showAnnotation(page, "Edit pixi.toml directly");
   await waitForClipEnd();
   await hideAnnotation(page);
 
   // Scene 6: Version History — expand an older version to show rollback
   logScene(6, Date.now() - recordingStart);
   markAudioStart("06.wav");
-  await demoClick(page, page.getByText("Version History", { exact: true }));
+  await demoClick(page, page.getByText("Versions", { exact: true }));
   await sleep(500);
   // Click the expand button on the second version card (first non-latest)
   // Version cards each have a ghost button with ChevronRight icon
@@ -575,33 +564,22 @@ async function recordDemo(base: string) {
   const expandBtn = secondVersion.locator("button").filter({ has: page.locator("svg") }).first();
   await demoClick(page, expandBtn);
   await sleep(500);
-  await showAnnotation(page, "Version history with rollback");
+  await showAnnotation(page, "Complete version history with rollback");
   await waitForClipEnd();
   await hideAnnotation(page);
 
-  // Scene 7: Publish workspace to OCI registry
-  // Navigate to Publications tab first, publish, then show the artifact in the tab
+    // Scene 7: Jobs page
   logScene(7, Date.now() - recordingStart);
-  await demoClick(page, page.locator("button").filter({ hasText: /^Publications/ }));
-  await sleep(500);
+  await demoClick(page, page.getByText("Jobs", { exact: true }));
   markAudioStart("07.wav");
-  await demoClick(page, page.getByRole("button", { name: "Publish" }));
-  await page.getByText("Publish Workspace to OCI Registry").waitFor();
-  await sleep(800);
-  await showAnnotation(page, "Publish to OCI registries");
-  await sleep(500);
-  // Form auto-populates with defaults; click publish without changing anything
-  await demoClick(page, page.locator("button[type='submit']").filter({ hasText: "Publish" }));
-  await page.getByText("Published successfully!").waitFor({ timeout: 30000 });
+  const jobCard = page.locator("[class*='card']").first();
+  if (await jobCard.isVisible()) {
+    await demoClick(page, jobCard);
+    await sleep(500);
+  }
+  await showAnnotation(page, "Real-time job logs");
   await waitForClipEnd();
   await hideAnnotation(page);
-  // Dialog auto-closes after 2s and triggers page reload
-  await sleep(3000);
-  await page.getByText("Workspace details and packages").waitFor({ timeout: 10000 }).catch(() => {});
-  await sleep(500);
-  // Navigate back to Publications tab to show the published artifact
-  await demoClick(page, page.locator("button").filter({ hasText: /^Publications/ }));
-  await sleep(1000);
 
   // Scene 8: Share workspace with team member (Collaborators)
   // Navigate to Collaborators tab first, share, then show collaborator in the tab
@@ -631,19 +609,36 @@ async function recordDemo(base: string) {
   await page.getByText("Share Workspace").waitFor({ state: "hidden", timeout: 3000 }).catch(() => {});
   await sleep(500);
 
-  // Scene 9: Jobs page
+  // Scene 9: Publish workspace to OCI registry
+  // Navigate to Publications tab first, publish, then show the artifact in the tab
   logScene(9, Date.now() - recordingStart);
-  await demoClick(page, page.locator("header nav").getByText("Jobs"));
-  await page.getByText("View all job executions").waitFor();
+  await demoClick(page, page.locator("button").filter({ hasText: /^Publications/ }));
+  await sleep(500);
   markAudioStart("09.wav");
-  const jobCard = page.locator("[class*='card']").first();
-  if (await jobCard.isVisible()) {
-    await demoClick(page, jobCard);
-    await sleep(500);
+  await demoClick(page, page.getByRole("button", { name: "Publish" }));
+  await page.getByText("Publish Workspace to OCI Registry").waitFor();
+  await sleep(800);
+  await showAnnotation(page, "Publish to OCI registries");
+  await sleep(500);
+  // Form auto-populates with defaults, publish without changes
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await demoClick(page, page.locator("button[type='submit']").filter({ hasText: "Publish" }));
+    try {
+      await page.getByText("Published successfully!").waitFor({ timeout: 30000 });
+      break;
+    } catch {
+      if (attempt === 2) throw new Error("Publish did not succeed after 3 attempts");
+    }
   }
-  await showAnnotation(page, "Real-time job logs");
   await waitForClipEnd();
   await hideAnnotation(page);
+  // Dialog auto-closes after 2s and triggers page reload
+  await sleep(3000);
+  await page.getByText("Workspace details and packages").waitFor({ timeout: 10000 }).catch(() => {});
+  await sleep(500);
+  // Navigate back to Publications tab to show the published artifact
+  await demoClick(page, page.locator("button").filter({ hasText: /^Publications/ }));
+  await sleep(1000);
 
   // Scene 10: Registries page
   logScene(10, Date.now() - recordingStart);
@@ -658,25 +653,19 @@ async function recordDemo(base: string) {
   logScene(11, Date.now() - recordingStart);
   await demoClick(page, page.getByRole("button", { name: "Browse" }).first());
   await page.getByText("Browse repositories in this registry").waitFor();
-  await page.getByRole("table").getByRole("button", { name: "View Tags" }).first().waitFor({ timeout: 30000 });
   markAudioStart("11.wav");
   await showAnnotation(page, "Browse environments in the registry");
   await sleep(3000);
   await hideAnnotation(page);
 
-  // View Tags → Import flow (continues during narration)
-  await demoClick(page, page.getByRole("table").getByRole("button", { name: "View Tags" }).first());
-  await page.getByText("Select a tag to import").waitFor();
-  await page.getByRole("table").getByRole("button", { name: "Import", exact: true }).first().waitFor({ timeout: 15000 });
-  await demoClick(page, page.getByRole("table").getByRole("button", { name: "Import", exact: true }).first());
+  // Import flow (continues during narration)
+  // First import button to open the name-input dialog, then the next import
+  await demoClick(page, page.getByRole("button", { name: "Import", exact: true }).first());
   await showAnnotation(page, "Import environments with one click");
-  const wsNameInput = page.getByPlaceholder("Enter workspace name");
-  await wsNameInput.waitFor();
-  await demoClick(page, wsNameInput);
-  await demoType(page, wsNameInput, "imported-env");
-  const importCard = page.locator("[class*='card']", { has: page.getByText("Import Environment") });
-  await demoClick(page, importCard.getByRole("button", { name: "Import", exact: true }));
+  await sleep(1000);
+  await demoClick(page, page.getByRole("button", { name: "Import", exact: true }).nth(1));
   await page.waitForURL("**/workspaces", { timeout: 60000 });
+  await sleep(300);
   await hideAnnotation(page);
   await waitForClipEnd();
 
@@ -693,7 +682,7 @@ async function recordDemo(base: string) {
   logScene(13, Date.now() - recordingStart);
   markAudioStart("13.wav");
   await demoClick(page, page.getByText("Users", { exact: true }));
-  await showAnnotation(page, "Multi-user access control");
+  await showAnnotation(page, "Manage users and set access level");
   await waitForClipEnd();
   await hideAnnotation(page);
 
@@ -701,7 +690,7 @@ async function recordDemo(base: string) {
   logScene(14, Date.now() - recordingStart);
   markAudioStart("14.wav");
   await demoClick(page, page.locator("aside").getByText("Registries"));
-  await showAnnotation(page, "Manage OCI registries");
+  await showAnnotation(page, "Manage available OCI registries");
   await waitForClipEnd();
   await hideAnnotation(page);
 
@@ -709,7 +698,7 @@ async function recordDemo(base: string) {
   logScene(15, Date.now() - recordingStart);
   markAudioStart("15.wav");
   await demoClick(page, page.locator("aside").getByText("Logs"));
-  await showAnnotation(page, "Complete audit trail");
+  await showAnnotation(page, "Access complete audit trail");
   await waitForClipEnd();
   await hideAnnotation(page);
 

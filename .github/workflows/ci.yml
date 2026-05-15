@@ -27,7 +27,7 @@ jobs:
       - name: Download nebi binary
         run: |
           mkdir -p bin
-          gh release download v0.7 --repo nebari-dev/nebi --pattern 'nebi_*_macOS_arm64.tar.gz' --output - | tar xz -C bin
+          gh release download v0.11 --repo nebari-dev/nebi --pattern 'nebi_*_macOS_arm64.tar.gz' --output - | tar xz -C bin
           chmod +x bin/nebi
         env:
           GH_TOKEN: ${{ github.token }}

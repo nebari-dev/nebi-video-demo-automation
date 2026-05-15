@@ -39,21 +39,21 @@ NARRATIONS = [
     ),
     (
         "03.wav",
-        "Clicking into a workspace gives you the full picture. "
-        "You can see which packages are installed, "
-        "the platforms it supports, and the current configuration.",
+        "Clicking into a workspace gives you a quick overview,"
+        "like status, creation date, and collaborators."
+        "with more details in each tab along the top.",
     ),
     (
         "04.wav",
-        "Adding a new package is simple. "
-        "Just open the install dialog, type the package name, "
-        "and hit install. Nebee handles the rest in the background.",
+        "You can view and edit the pixie dot toml configuration "
+        "directly in the browser. "
+        "Great for quick tweaks without opening a terminal.",
     ),
     (
         "05.wav",
-        "You can also edit the pixie dot toml configuration "
-        "directly in the browser. "
-        "Great for quick tweaks without opening a terminal.",
+        "The UI also makes adding a new package simple. "
+        "Just open the UI Mode, type the package name, "
+        "and hit install. Nebee handles the rest in the background.",
     ),
     (
         "06.wav",
@@ -63,21 +63,21 @@ NARRATIONS = [
     ),
     (
         "07.wav",
-        "When you're ready, just hit publish. "
-        "Nebee pushes your environment to an O.C.I. registry "
-        "so your team can pull it from anywhere.",
+        "All the heavy lifting happens through background jobs. "
+        "You get full real-time logs for every operation, "
+        "so you always know exactly what's going on.",
     ),
     (
         "08.wav",
-        "Sharing a workspace is easy. "
-        "Just click share, pick a team member, "
+        "If you'd like to share or collaborate with your team, "
+        "just click share, pick a team member, "
         "set their permission level, and they're in.",
     ),
     (
         "09.wav",
-        "All the heavy lifting happens through background jobs. "
-        "You get full real-time logs for every operation, "
-        "so you always know exactly what's going on.",
+        "To share your workspace with a larger group or publicly,"
+        "you can publish your environment to an O.C.I. registry "
+        "so your team can pull it from anywhere.",
     ),
     (
         "10.wav",
@@ -92,8 +92,7 @@ NARRATIONS = [
     ),
     (
         "12.wav",
-        "Over in the admin panel, "
-        "you get a bird's-eye view of the entire platform.",
+        "Over in the admin panel, you get a bird's-eye view of the entire platform.",
     ),
     (
         "13.wav",
@@ -121,7 +120,9 @@ NARRATIONS = [
 def main():
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    pipeline = KPipeline(repo_id="hexgrad/Kokoro-82M", lang_code="a")  # American English
+    pipeline = KPipeline(
+        repo_id="hexgrad/Kokoro-82M", lang_code="a"
+    )  # American English
 
     durations = {}
     total_dur = 0.0
