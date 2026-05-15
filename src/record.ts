@@ -620,9 +620,16 @@ async function recordDemo(base: string) {
   await sleep(800);
   await showAnnotation(page, "Publish to OCI registries");
   await sleep(500);
-  // Form auto-populates with defaults; click publish without changing anything
-  await demoClick(page, page.locator("button[type='submit']").filter({ hasText: "Publish" }));
-  await page.getByText("Published successfully!").waitFor({ timeout: 30000 });
+  // Form auto-populates with defaults, publish without changes
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await demoClick(page, page.locator("button[type='submit']").filter({ hasText: "Publish" }));
+    try {
+      await page.getByText("Published successfully!").waitFor({ timeout: 30000 });
+      break;
+    } catch {
+      if (attempt === 2) throw new Error("Publish did not succeed after 3 attempts");
+    }
+  }
   await waitForClipEnd();
   await hideAnnotation(page);
   // Dialog auto-closes after 2s and triggers page reload
